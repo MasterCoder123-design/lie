@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroScan Truth Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, hsl(200,35%,12%) 0%, hsl(200,40%,6%) 70%);
+      font-family: 'Rajdhani', sans-serif;
+      color: hsl(195,100%,90%);
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+    .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .ambient .a1 { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 600px; height: 600px; border-radius: 50%; background: hsla(199,100%,50%,0.05); filter: blur(80px); }
+    .ambient .a2 { position: absolute; top: 25%; right: 25%; width: 300px; height: 300px; border-radius: 50%; background: hsla(160,100%,45%,0.05); filter: blur(80px); }
+    .container { position: relative; z-index: 1; width: 100%; max-width: 520px; }
+    h1 { font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 4px; text-align: center; }
+    .subtitle { text-align: center; color: hsl(200,20%,55%); font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; margin-bottom: 8px; }
+    canvas { display: block; margin: 0 auto; }
+    .panel {
+      background: hsla(200,30%,10%,0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid hsla(200,30%,20%,0.5);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 0 60px hsla(200,40%,6%,0.8), inset 0 1px 0 hsla(195,100%,90%,0.05);
+    }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      background: hsl(200,30%,15%);
+      border: 1px solid hsla(200,30%,20%,0.5);
+      color: hsl(195,100%,90%);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      outline: none;
+      transition: all 0.3s;
+    }
+    input::placeholder { color: hsl(200,20%,55%); }
+    input:focus { border-color: hsla(199,100%,50%,0.5); box-shadow: 0 0 12px hsla(199,100%,50%,0.2); }
+    input:disabled { opacity: 0.5; }
+    .btn {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      border: none;
+      background: linear-gradient(135deg, hsl(195,100%,60%), hsl(220,100%,55%));
+      color: hsl(200,40%,6%);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 0 30px hsla(199,100%,50%,0.4);
+    }
+    .btn:hover { transform: scale(1.02); box-shadow: 0 0 40px hsla(199,100%,50%,0.6); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; background: hsl(200,30%,15%); color: hsl(200,20%,55%); box-shadow: none; }
+    .progress-wrap { margin-top: 1.25rem; display: none; }
+    .progress-wrap.active { display: block; animation: fadeIn 0.3s ease-out; }
+    .progress-bar { height: 4px; width: 100%; background: hsl(200,20%,18%); border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, hsl(160,100%,45%), hsl(199,100%,50%)); border-radius: 999px; transition: width 0.3s ease-out; }
+    .status-text { font-size: 0.75rem; color: hsl(200,20%,55%); letter-spacing: 1px; margin-top: 0.5rem; animation: pulse 1.5s ease-in-out infinite; }
+    .result { margin-top: 1.5rem; text-align: center; display: none; }
+    .result.active { display: block; animation: scaleIn 0.3s ease-out; }
+    .result-box { display: inline-block; padding: 1rem 2rem; border-radius: 1rem; border: 1px solid transparent; }
+    .result-box.truth { border-color: hsla(160,100%,45%,0.3); box-shadow: 0 0 30px hsla(160,100%,45%,0.5); }
+    .result-box.deception { border-color: hsla(10,90%,55%,0.3); box-shadow: 0 0 30px hsla(10,90%,55%,0.5); }
+    .result-text { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: 4px; }
+    .result-text.truth { color: hsl(160,100%,45%); text-shadow: 0 0 20px hsl(160,100%,45%); }
+    .result-text.deception { color: hsl(10,90%,55%); text-shadow: 0 0 20px hsl(10,90%,55%); }
+    .confidence { font-size: 0.75rem; color: hsl(200,20%,55%); letter-spacing: 1px; margin-top: 0.25rem; }
+    .history { margin-top: 2rem; }
+    .history h3 { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: hsl(200,20%,55%); margin-bottom: 0.75rem; }
+    .history-item {
+      background: hsla(200,30%,10%,0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid hsla(200,30%,20%,0.5);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+    .history-item .text { color: hsla(195,100%,90%,0.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .history-item .tag { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 1px; flex-shrink: 0; }
+    .tag.truth { color: hsl(160,100%,45%); }
+    .tag.deception { color: hsl(10,90%,55%); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes flicker { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+  </style>
+</head>
+<body>
+  <div class="ambient"><div class="a1"></div><div class="a2"></div></div>
+  <div class="container">
+    <h1>NEUROSCAN</h1>
+    <p class="subtitle">Biometric Truth Verification</p>
+    <canvas id="brain" width="280" height="280"></canvas>
+    <div class="panel">
+      <input type="text" id="statement" placeholder="Enter statement for analysis..." />
+      <button class="btn" id="scanBtn" onclick="analyze()">Begin Scan</button>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="status-text" id="statusText"></p>
+      </div>
+      <div class="result" id="resultBox">
+        <div class="result-box" id="resultInner">
+          <p class="result-text" id="resultText"></p>
+          <p class="confidence" id="confidence"></p>
+        </div>
+      </div>
+    </div>
+    <div class="history" id="history" style="display:none">
+      <h3>Scan Log</h3>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Brain canvas animation
+    const canvas = document.getElementById('brain');
+    const ctx = canvas.getContext('2d');
+    let frame = 0, scanning = false, resultState = null;
+
+    function getColor() {
+      if (resultState === 'truth') return { r: 0, g: 242, b: 96 };
+      if (resultState === 'deception') return { r: 255, g: 75, b: 43 };
+      return { r: 0, g: 198, b: 255 };
+    }
+
+    function drawBrain() {
+      ctx.clearRect(0, 0, 280, 280);
+      const cx = 140, cy = 140, c = getColor(), spd = scanning ? 3 : 1;
+      for (let i = 0; i < 3; i++) {
+        const r = 90 + i * 20, a = scanning ? 0.15 + Math.sin(frame * 0.05 + i) * 0.1 : 0.08;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${a})`; ctx.lineWidth = 1; ctx.stroke();
+      }
+      const nodes = [];
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 2 + frame * 0.01 * spd;
+        const r = 40 + Math.sin(i * 1.5 + frame * 0.03) * 30;
+        const x = cx + Math.cos(angle) * r, y = cy + Math.sin(angle) * r;
+        nodes.push({ x, y });
+        const na = scanning ? 0.8 + Math.sin(frame * 0.1 + i) * 0.2 : 0.4;
+        ctx.beginPath(); ctx.arc(x, y, scanning ? 3 : 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${na})`; ctx.fill();
+      }
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y, d = Math.sqrt(dx*dx+dy*dy);
+        if (d < 80) {
+          const a = scanning ? (1-d/80)*0.4*(0.5+Math.sin(frame*0.05+i)*0.5) : (1-d/80)*0.15;
+          ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${a})`; ctx.lineWidth = 1; ctx.stroke();
+        }
+      }
+      const g = ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+      const ca = scanning ? 0.15+Math.sin(frame*0.08)*0.1 : 0.05;
+      g.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${ca})`); g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g; ctx.fillRect(0,0,280,280);
+      if (scanning) {
+        const sw = (frame * 0.04) % (Math.PI * 2);
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(sw)*130, cy+Math.sin(sw)*130);
+        ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},0.3)`; ctx.lineWidth = 2; ctx.stroke();
+      }
+      frame++;
+      requestAnimationFrame(drawBrain);
+    }
+    drawBrain();
+
+    // Scan logic
+    const history = [];
+
+    function analyze() {
+      const input = document.getElementById('statement');
+      const stmt = input.value.trim();
+      if (!stmt || scanning) return;
+
+      scanning = true; resultState = null;
+      const btn = document.getElementById('scanBtn');
+      const pw = document.getElementById('progressWrap');
+      const pf = document.getElementById('progressFill');
+      const st = document.getElementById('statusText');
+      const rb = document.getElementById('resultBox');
+
+      btn.disabled = true; btn.textContent = 'SCANNING...';
+      rb.classList.remove('active');
+      pw.classList.add('active');
+      pf.style.width = '0%';
+      st.textContent = 'Initializing neural scan...';
+
+      const phases = [
+        { at: 400, text: 'Analyzing micro-expressions...' },
+        { at: 1000, text: 'Processing vocal patterns...' },
+        { at: 1600, text: 'Cross-referencing biometric data...' },
+        { at: 2200, text: 'Compiling results...' }
+      ];
+      phases.forEach(p => setTimeout(() => { if (scanning) st.textContent = p.text; }, p.at));
+
+      let prog = 0;
+      const iv = setInterval(() => {
+        prog += Math.random() * 8 + 2;
+        if (prog >= 100) { prog = 100; clearInterval(iv); }
+        pf.style.width = prog + '%';
+      }, 100);
+
+      setTimeout(() => {
+        clearInterval(iv); pf.style.width = '100%';
+        const outcome = Math.random() < 0.35 ? 'truth' : 'deception';
+        resultState = outcome; scanning = false;
+        btn.disabled = false; btn.textContent = 'BEGIN SCAN';
+        pw.classList.remove('active');
+
+        const ri = document.getElementById('resultInner');
+        const rt = document.getElementById('resultText');
+        const cf = document.getElementById('confidence');
+        ri.className = 'result-box ' + outcome;
+        rt.className = 'result-text ' + outcome;
+        rt.textContent = outcome === 'truth' ? 'TRUTH VERIFIED' : 'DECEPTION DETECTED';
+        rt.style.animation = 'flicker 0.1s ease-in-out 3';
+        setTimeout(() => rt.style.animation = '', 400);
+        cf.textContent = 'Confidence: ' + (70 + Math.random() * 29).toFixed(1) + '%';
+        rb.classList.add('active');
+
+        history.unshift({ stmt, outcome });
+        renderHistory();
+      }, 2800);
+    }
+
+    document.getElementById('statement').addEventListener('keydown', e => { if (e.key === 'Enter') analyze(); });
+
+    function renderHistory() {
+      const h = document.getElementById('history');
+      const hl = document.getElementById('historyList');
+      if (history.length === 0) { h.style.display = 'none'; return; }
+      h.style.display = 'block';
+      hl.innerHTML = history.map(e =>
+        `<div class="history-item"><span class="text">${e.stmt}</span><span class="tag ${e.outcome}">${e.outcome === 'truth' ? 'TRUE' : 'FALSE'}</span></div>`
+      ).join('');
+    }
+  </script>
+</body>
+</html>
