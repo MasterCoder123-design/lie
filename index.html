@@ -226,7 +226,7 @@
 
       setTimeout(() => {
         clearInterval(iv); pf.style.width = '100%';
-        const outcome = Math.random() < 0.35 ? 'truth' : 'deception';
+        const outcome = Math.random() < 0.5 ? 'truth' : 'deception';
         resultState = outcome; scanning = false;
         btn.disabled = false; btn.textContent = 'BEGIN SCAN';
         pw.classList.remove('active');
